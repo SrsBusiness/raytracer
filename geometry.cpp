@@ -161,6 +161,7 @@ class Quadric : public Object3D{ // class for general quadric solids
                 e * y * z + f * z * z + g * x + h * y + j * z + k;
             //GLdouble roots[2]; // solutions for t
             int num_roots = quad_roots(a_q, b_q, c_q, t);
+            return num_roots;
         }
 };
 
