@@ -33,14 +33,14 @@ typedef struct color {
     const color operator*(const GLdouble scale) const {
         return { r * scale, g * scale, b * scale };
     }
-    color operator*=(const GLdouble scale){
+    const color operator*=(const GLdouble scale){
         *this = *this * scale;
         return *this;
     }
     const color operator+(const color &c) const {
         return { r + c.r, g + c.g, b + c.b };
     }
-    color operator+=(const color &c){
+    const color operator+=(const color &c){
         *this = *this + c;
         return *this;
     }
@@ -88,7 +88,7 @@ class point4d {
         const double operator*(const point4d &rhs) const { // dot product
             return x * rhs.x + y * rhs.y + z * rhs.z;
         }
-        point4d operator*=(const double rhs){
+        const point4d operator*=(const double rhs){
             *this = rhs * *this; 
             return *this;
         }
@@ -99,7 +99,7 @@ class point4d {
             p.z = x * rhs.y - y * rhs.x;
             return p;
         }
-        point4d operator^=(const point4d &rhs){
+        const point4d operator^=(const point4d &rhs){
             *this = *this ^ rhs;
             return *this;
         }
@@ -111,7 +111,7 @@ class point4d {
             p.w = w + rhs.w;
             return p;
         }
-        point4d operator +=(const point4d &rhs){
+        const point4d operator +=(const point4d &rhs){
             *this = *this + rhs;
             return *this;
         }
@@ -120,14 +120,14 @@ class point4d {
         const point4d operator|(const point4d &normal) const {
             return *this - (2 *(*this * normal) * normal);
         }
-        point4d operator|=(const point4d &normal){
+        const point4d operator|=(const point4d &normal){
             *this = *this | normal;
             return *this;
         }
         const point4d operator-(const point4d &rhs) const {
             return (*this + (-1.0 * rhs)); 
         }
-        point4d operator-=(const point4d &rhs){
+        const point4d operator-=(const point4d &rhs){
             *this = *this - rhs;
             return *this;
         }
