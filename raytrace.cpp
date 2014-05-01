@@ -31,8 +31,8 @@ using namespace std;
 /* local data */
 
 color source, back, ambi;
-//vector lsource
-
+vector4d lsource;
+vector4d eye;
 
 /* the scene: so far, just one sphere */
 //sphere* s1;
@@ -181,33 +181,64 @@ void firstHit(ray* r, point4d* p, vector4d* n, material *m) {
         }else{
             //printf("no intersect\n");
         }
-
-
     }
     if(t < 10000.0){
         //printf("t: %f\n", t);
         findpointOnRay(r,t,p);
         //printf("point p: %f, %f, %f, %f\n", p -> x, p -> y, p -> z, p -> w);
-        *n = normal;
+        if (n != NULL) *n = normal;
         //printf("normal: %f, %f, %f, %f\n", normal.x, normal.y, normal.z, normal.w);
-        m = o -> m;
+        if (m != NULL) *m = *(o -> m);
     } else {
         p->w = 0.0;
     }
 }
 
-color trace(ray* r, int depth){
+color trace(ray* r, int depth) {
     ray flec, frac;
     color spec, refr, dull;
+    color intensity;
     if(depth > MAX_DEPTH){
         return back; 
     }
+    depth++;
     point4d intersect;
-    intersect.w = 0;
     vector4d n;
     material m;
+    intersect.w = 0;
     firstHit(r, &intersect, &n, &m);
     if(intersect.w == 0){ // no intersect
-    }
+        intensity = (*(r.dir) * lsource) * source;
+    } else {
+        // compute reflection
+        if (m.s > 0) {
+            flec.start = intersect;
+            flec.dir = r.dir<;
+            spec = m.s * trace(flec, depth) + m.c * pow((~(*r.dir)) * eye, m.h);
+        } else {
+            spec = { 0, 0, 0 };
+        }
+        
+        // compute refraction
+        if (m.r > 0) {
+            refr = {0, 0, 0};
+        } else {
+            refr = {0, 0, 0};
+        }
 
+        // compute shadow
+        ray shadow = {&intersect, &lsource};
+        point4d shadow_sect;
+        shadow_sect.w = 0;
+        firstHit(shadow, &shadow_sect, NULL, NULL);
+        if (shadow_sect.w == 0) {
+            // no shadow (no intersection)
+            dull = m.d * source * (n * lsource) + m.a * ambi;
+        } else {
+            dull = m.a * ambi;
+        }
+
+        intensity = spec + refr + dull;
+    }
+    return intensity;
 }
