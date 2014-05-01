@@ -101,6 +101,15 @@ class point4d {
             *this = *this + rhs;
             return *this;
         }
+        // r=d-2(d?n)n
+        // reflection across normal
+        const point4d operator|(const point4d &normal){
+            return *this - (2 *(*this * normal) * normal);
+        }
+        const point4d operator|=(const point4d &normal){
+            *this = *this | normal;
+            return *this;
+        }
         const point4d operator-(const point4d &rhs){
             return (*this + (-1.0 * rhs)); 
         }
