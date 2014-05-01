@@ -202,7 +202,7 @@ color trace(ray* r, int depth) {
         return back; 
     }
     depth++;
-    point4d intersect = {};
+    point4d intersect = { 0, 0, 0, 0 };
     vector4d n;
     material m;
     firstHit(r, &intersect, &n, &m);
@@ -216,21 +216,21 @@ color trace(ray* r, int depth) {
             flec.dir = &norm;
             spec = trace(&flec, depth) * m.s + m.c * pow((~(*r->dir)) * eye, m.h);
         } else {
-            spec = {};
+            spec = { 0, 0, 0 };
         }
         
         // compute refraction
         if (m.r > 0) {
-            refr = {};
+            refr = { 0, 0, 0 };
         } else {
-            refr = {};
+            refr = { 0, 0, 0 };
         }
 
         // compute shadow
         ray shadow;
         shadow.start = &intersect;
         shadow.dir = &lsource;
-        point4d shadow_sect = {};
+        point4d shadow_sect = { 0, 0, 0, 0 };
         firstHit(&shadow, &shadow_sect, (vector4d*)nullptr, (material*)nullptr);
         if (shadow_sect.w == 0) {
             // no shadow (no intersection)
