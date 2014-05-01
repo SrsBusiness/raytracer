@@ -25,21 +25,27 @@ class point4d;
 const point4d operator*(const double, const point4d &);
 const point4d operator~(const point4d &);
 
-typedef struct material {
-    /* color */
-    GLdouble r;
-    GLdouble g;
-    GLdouble b; 
-    /* ambient reflectivity */
-    GLdouble amb;
-} material;
-
 typedef struct color {
     GLdouble r;
     GLdouble g;
     GLdouble b; 
     /* these should be between 0 and 1 */
 } color;
+
+typedef struct material {
+    /* color */
+    color c;
+    /* specular reflectivity */
+    GLdouble s;
+    /* refractivity */
+    GLdouble r;
+    /* shininess */
+    GLdouble h;
+    /* ambient reflectivity */
+    GLdouble a;
+    /* diffuse reflectivity */
+    GLdouble d;
+} material;
 
 typedef struct sphere {
     point4d* c;  /* center */
