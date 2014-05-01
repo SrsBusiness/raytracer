@@ -30,6 +30,20 @@ typedef struct color {
     GLdouble g;
     GLdouble b; 
     /* these should be between 0 and 1 */
+    const color operator*(const GLdouble scale) const {
+        return { r * scale, g * scale, b * scale };
+    }
+    color operator*=(const GLdouble scale){
+        *this = *this * scale;
+        return *this;
+    }
+    const color operator+(const color &c) const {
+        return { r + c.r, g + c.g, b + c.b };
+    }
+    color operator+=(const color &c){
+        *this = *this + c;
+        return *this;
+    }
 } color;
 
 typedef struct material {
@@ -71,25 +85,25 @@ class point4d {
         }
         // 2 * v
 
-        const double operator*(const point4d &rhs){ // dot product
+        const double operator*(const point4d &rhs) const { // dot product
             return x * rhs.x + y * rhs.y + z * rhs.z;
         }
-        const point4d operator*=(const double rhs){
+        point4d operator*=(const double rhs){
             *this = rhs * *this; 
             return *this;
         }
-        const point4d operator^(const point4d &rhs){
+        const point4d operator^(const point4d &rhs) const {
             point4d p;
             p.x = y * rhs.z - z * rhs.y;
             p.y = z * rhs.x - x * rhs.z;
             p.z = x * rhs.y - y * rhs.x;
             return p;
         }
-        const point4d operator^=(const point4d &rhs){
+        point4d operator^=(const point4d &rhs){
             *this = *this ^ rhs;
             return *this;
         }
-        const point4d operator+(const point4d &rhs){
+        const point4d operator+(const point4d &rhs) const {
             point4d p;
             p.x = x + rhs.x;
             p.y = y + rhs.y;
@@ -97,23 +111,23 @@ class point4d {
             p.w = w + rhs.w;
             return p;
         }
-        const point4d operator +=(const point4d &rhs){
+        point4d operator +=(const point4d &rhs){
             *this = *this + rhs;
             return *this;
         }
         // r=d-2(d?n)n
         // reflection across normal
-        const point4d operator|(const point4d &normal){
+        const point4d operator|(const point4d &normal) const {
             return *this - (2 *(*this * normal) * normal);
         }
-        const point4d operator|=(const point4d &normal){
+        point4d operator|=(const point4d &normal){
             *this = *this | normal;
             return *this;
         }
-        const point4d operator-(const point4d &rhs){
+        const point4d operator-(const point4d &rhs) const {
             return (*this + (-1.0 * rhs)); 
         }
-        const point4d operator-=(const point4d &rhs){
+        point4d operator-=(const point4d &rhs){
             *this = *this - rhs;
             return *this;
         }

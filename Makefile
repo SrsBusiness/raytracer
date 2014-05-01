@@ -14,9 +14,9 @@ LIBS = -lglut -lGLU -lGL -lpthread -lm
 UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
 CC = g++
-CFLAGS = -Wall -g -D__MAC__
+CFLAGS = -Wall -g -D__MAC__ -std=c++11 -fdiagnostics-color=always
 INCLUDE = 
-LIBDIR = -L/lusr/X11/lib
+LIBDIR = -L/usr/X11/lib
 LIBS = -framework OpenGL -framework GLUT
 endif
 

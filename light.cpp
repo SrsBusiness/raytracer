@@ -21,10 +21,8 @@ material* makeMaterial(GLdouble r, GLdouble g, GLdouble b, GLdouble amb) {
     /* allocate memory */
     m = (material*) malloc(sizeof(material));
     /* put stuff in it */
-    m->r = r;
-    m->g = g;
-    m->b = b;
-    m->amb = amb;
+    m->c = { r, g, b };
+    m->a = amb;
     return(m);
 }
 
@@ -36,9 +34,9 @@ material* makeMaterial(GLdouble r, GLdouble g, GLdouble b, GLdouble amb) {
 void shade(point4d* p, vector4d* n, material* m, vector4d* in, color* c, int d) {
 
     /* so far, just finds ambient component of color */
-    c->r = m->amb * m->r;
-    c->g = m->amb * m->g;
-    c->b = m->amb * m->b;
+    c->r = m->a * m->c.r;
+    c->g = m->a * m->c.g;
+    c->b = m->a * m->c.b;
 
     /* clamp color values to 1.0 */
     if (c->r > 1.0) c->r = 1.0;
