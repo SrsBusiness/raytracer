@@ -26,6 +26,8 @@ void init(int, int);
 void traceRay(ray*,color*);
 void drawScene(void);
 void firstHit(ray*,point4d*,vector4d*,material**);
+color trace(ray*,int);
+color normalized(color);
 
 using namespace std;
 /* local data */
@@ -83,12 +85,18 @@ void display() {
 }
 
 void initScene () {
+    source = {1, 1, 1};
+    back = {0, 0, 0};
+    ambi = {0.2, 0.1, 0.1};
+    lsource = {0.5, 0.25, 0.75, 0};
+    lsource = ~lsource;
+
     //s1 = makeSphere(0.0,0.0,-2.0,0.25);
     //s1->m = makeMaterial(1.0,0.1,0.15,0.3);
     //objects.push_back(new Sphere(0, 0, 2, 1, (material){1, 0, 0, .2}));
-    objects.push_back(new Sphere(0, 0, -5, .25, (material){1, 1, 1, .2}));
-    objects.push_back(new Sphere(.1, 0, -4.7, .25, (material){1, 0, 1, .2}));
-    objects.push_back(new Cube(0, .1, -6, .5, (material){1, 0, 0, .5}));
+    objects.push_back(new Sphere(0, 0, -5, .25, (material){{0.4, 0.3, 0.2}, 0.5, 0.2, 0.5, 0.2, 0.4}));
+    objects.push_back(new Sphere(.1, 0, -4.7, .25, (material){{0.4, 0.9, 0.1}, 0.1, 0.9, 0.8, 0.2, 0.4}));
+    objects.push_back(new Cube(0, 1, -6, .5, (material){{0.2, 0.7, 0.1}, 0.3, 0.6, 0.2, 0.2, 0.4}));
 
     //objects.push_back(new Cube(0, 0, 2, 1, (material){1, 0, 0, .7}));
 }
@@ -100,43 +108,45 @@ void initCamera (int w, int h) {
 }
 
 void drawScene () {
-    //int i, j;
-    //GLdouble imageWidth;
-    ///* declare data structures on stack to avoid dynamic allocation */
-    //point4d worldPix;  /* current pixel in world coordinates */
-    //point4d direction; 
-    //ray r;
-    //color c;
+    int i, j;
+    GLdouble imageWidth;
+    /* declare data structures on stack to avoid dynamic allocation */
+    point4d worldPix;  /* current pixel in world coordinates */
+    point4d direction; 
+    ray r;
+    color c;
 
-    ///* initialize */
-    //worldPix.w = 1.0;
-    //worldPix.z = -pnear;
+    /* initialize */
+    worldPix.w = 1.0;
+    worldPix.z = -pnear;
 
-    //imageWidth = 2 * pnear * tan(fovx / 2);
+    imageWidth = 2 * pnear * tan(fovx / 2);
 
-    ///* trace a ray for every pixel */
-    //for (i = 0; i < width; i++) {
-    //    /* Refresh the display */
-    //    /* Comment this line out after debugging */
-    //    flushCanvas();
+    /* trace a ray for every pixel */
+    for (i = 0; i < width; i++) {
+       /* Refresh the display */
+       /* Comment this line out after debugging */
+       flushCanvas();
 
-    //    for (j = 0; j < height; j++) {
+       for (j = 0; j < height; j++) {
 
-    //        /* find position of pixel in world coordinates */
-    //        /* y position = (pixel height/middle) scaled to world coords */ 
-    //        worldPix.y = (j - (height / 2)) * imageWidth / width;
-    //        /* x position = (pixel width/middle) scaled to world coords */ 
-    //        worldPix.x = (i - (width / 2)) * imageWidth / width;
+           /* find position of pixel in world coordinates */
+           /* y position = (pixel height/middle) scaled to world coords */ 
+           worldPix.y = (j - (height / 2)) * imageWidth / width;
+           /* x position = (pixel width/middle) scaled to world coords */ 
+           worldPix.x = (i - (width / 2)) * imageWidth / width;
 
-    //        /* find direction */
-    //        /* note: direction vector4d is NOT NORMALIZED */
-    //        r.copy(worldPix, worldPix - *viewpoint);  
-    //        /* trace the ray! */
-    //        traceRay(&r, &c, 0);
-    //        /* write the pixel! */
-    //        drawPixel(i,j,c.r,c.g,c.b);
-    //    }
-    //}
+           /* find direction */
+           /* note: direction vector4d is NOT NORMALIZED */
+           r.copy(worldPix, worldPix - *viewpoint);
+           eye = ~(*r.dir);
+
+           /* trace the ray! */
+           c = trace(&r, 0);
+           /* write the pixel! */
+           drawPixel(i,j,c.r,c.g,c.b);
+       }
+    }
 }
 
 /* returns the color seen by ray r in parameter c */
@@ -198,7 +208,7 @@ color trace(ray* r, int depth) {
     ray flec, frac;
     color spec, refr, dull;
     color intensity;
-    if(depth > MAX_DEPTH){
+    if(depth >= MAX_DEPTH){
         return back; 
     }
     depth++;
@@ -211,10 +221,9 @@ color trace(ray* r, int depth) {
     } else {
         // compute reflection
         if (m.s > 0) {
-            vector4d norm = (*r->dir)|intersect;
-            flec.start = &intersect;
-            flec.dir = &norm;
-            spec = trace(&flec, depth) * m.s + m.c * pow((~(*r->dir)) * eye, m.h);
+            vector4d norm = (*r->dir)|n;
+            flec.copy(intersect, norm); 
+            spec = trace(&flec, depth) * m.s + source * pow((~(*r->dir) * eye), m.h);
         } else {
             spec = { 0, 0, 0 };
         }
@@ -228,8 +237,7 @@ color trace(ray* r, int depth) {
 
         // compute shadow
         ray shadow;
-        shadow.start = &intersect;
-        shadow.dir = &lsource;
+        shadow.copy(intersect, lsource);
         point4d shadow_sect = { 0, 0, 0, 0 };
         firstHit(&shadow, &shadow_sect, (vector4d*)nullptr, (material*)nullptr);
         if (shadow_sect.w == 0) {
