@@ -211,16 +211,19 @@ class Polyhedron: public Object3D{
             if(v)
                 for(int i = 0; i < num_vert; i++)
                     vertices[i] = v[i];
-            num_faces = nf;
-            num_edges = new GLint[num_faces];
-            indices = new GLint *[num_faces];
-            for(int i = 0; i < num_faces; i++){
-                if(ne)
-                    num_edges[i] = ne[i];
-                indices[i] = new GLint[num_edges[i]];
-                if(ind && ind[i])
-                    for(int j = 0; j < num_edges[i]; j++)
-                        indices[i][j] = ind[i][j];
+            if (nf > 0) {
+                num_faces = nf;
+                num_edges = new GLint[num_faces];
+                indices = new GLint *[num_faces];
+                if (ind != NULL && ne != NULL) {
+                    for(int i = 0; i < num_faces; i++){
+                            num_edges[i] = ne[i];
+                            indices[i] = new GLint[num_edges[i]];
+                            if(ind && ind[i])
+                                for(int j = 0; j < num_edges[i]; j++)
+                                    indices[i][j] = ind[i][j];
+                    }
+                }
             }
             this -> m = new material();
             *this -> m = m;
