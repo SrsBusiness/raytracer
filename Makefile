@@ -7,7 +7,7 @@ INCLUDE = -I/lusr/X11/include -I/lusr/include
 LIBDIR = -L/lusr/X11/lib -L/lusr/lib
 # Libraries that use native graphics hardware --
 # appropriate for Linux machines in Taylor basement
-LIBS = -lglut -lGLU -lGL -lpthread -lm
+LIBS = -lglut -lGLU -lGL -lpthread -lm -std=c++11
 
 ###########################################################
 # Options if compiling on Mac

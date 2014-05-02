@@ -131,7 +131,7 @@ class point4d {
             *this = *this - rhs;
             return *this;
         }
-        
+
 };
 
 
@@ -171,25 +171,25 @@ class Object3D{
     public:
         material *m;
         /*
-        virtual int intersect(ray r, GLdouble intersects[4][4]){
-            // substitute parametric equation of ray
-            // into implicit quadric equation:
-            // r: x = x0 + vxt
-            //    y = y0 + vyt
-            //    z = z0 + vzt
-            GLdouble roots[4]; 
-            GLdouble x = r.start -> x;
-            GLdouble y = r.start -> y;
-            GLdouble z = r.start -> z;
-            GLdouble w = r.start -> w;
-            int num_roots = intersect_t(r, roots);
-            for(int i = 0; i < num_roots; i++){
-                intersects[i][0] = x + r.dir -> x * roots[i];
-                intersects[i][1] = y + r.dir -> y * roots[i];
-                intersects[i][2] = z + r.dir -> z * roots[i];
-                intersects[i][3] = w + r.dir -> w * roots[i]; // r.dir -> w should be 0, and w will remain 1
-            }
-            return num_roots;
+           virtual int intersect(ray r, GLdouble intersects[4][4]){
+        // substitute parametric equation of ray
+        // into implicit quadric equation:
+        // r: x = x0 + vxt
+        //    y = y0 + vyt
+        //    z = z0 + vzt
+        GLdouble roots[4]; 
+        GLdouble x = r.start -> x;
+        GLdouble y = r.start -> y;
+        GLdouble z = r.start -> z;
+        GLdouble w = r.start -> w;
+        int num_roots = intersect_t(r, roots);
+        for(int i = 0; i < num_roots; i++){
+        intersects[i][0] = x + r.dir -> x * roots[i];
+        intersects[i][1] = y + r.dir -> y * roots[i];
+        intersects[i][2] = z + r.dir -> z * roots[i];
+        intersects[i][3] = w + r.dir -> w * roots[i]; // r.dir -> w should be 0, and w will remain 1
+        }
+        return num_roots;
         }
         */
         //virtual int intersect(ray r, GLdouble intersects[4][4]) =0; // returns number of intersects
@@ -208,20 +208,26 @@ class Polyhedron: public Object3D{
         Polyhedron(point4d *v, GLint nv, GLint **ind, GLint *ne, GLint nf, material m){
             num_vert = nv;
             vertices = new point4d[num_vert];
-            if(v)
-                for(int i = 0; i < num_vert; i++)
-                    vertices[i] = v[i];
+            for(int i = 0; i < num_vert; i++)
+                vertices[i] = v[i];
             num_faces = nf;
             num_edges = new GLint[num_faces];
             indices = new GLint *[num_faces];
             for(int i = 0; i < num_faces; i++){
-                if(ne)
-                    num_edges[i] = ne[i];
+                num_edges[i] = ne[i];
                 indices[i] = new GLint[num_edges[i]];
-                if(ind && ind[i])
-                    for(int j = 0; j < num_edges[i]; j++)
-                        indices[i][j] = ind[i][j];
+                for(int j = 0; j < num_edges[i]; j++)
+                    indices[i][j] = ind[i][j];
             }
+            this -> m = new material();
+            *this -> m = m;
+        }
+        Polyhedron(GLint nv, GLint nf, material m){
+            num_vert = nv;
+            num_faces = nf;
+            vertices = new point4d[num_vert];
+            num_edges = new GLint[num_faces];
+            indices = new GLint *[num_faces];
             this -> m = new material();
             *this -> m = m;
         }
@@ -270,7 +276,7 @@ class Polyhedron: public Object3D{
                 }else if(face_dir > 0.0001){
                     if(t < exit)
                         exit = t;
-                        exit_n = normal;
+                    exit_n = normal;
                 }
             }
             if(enter < exit){
@@ -291,8 +297,7 @@ class Polyhedron: public Object3D{
 
 class Rect_Prism : public Polyhedron{
     public:
-        Rect_Prism(GLdouble x, GLdouble y, GLdouble z, GLdouble w, GLdouble h, GLdouble l, material m) : Polyhedron(NULL, 8, NULL, NULL, 6, m){
-            vertices = new point4d[8];
+        Rect_Prism(GLdouble x, GLdouble y, GLdouble z, GLdouble w, GLdouble h, GLdouble l, material m) : Polyhedron(8, 6, m){
             vertices[0] = {x, y, z, 0};
             vertices[1] = {x + w, y, z, 0};
             vertices[2] = {x + w, y, z + l, 0};
@@ -301,11 +306,8 @@ class Rect_Prism : public Polyhedron{
             vertices[5] = {x + w, y + h, z, 0};
             vertices[6] = {x + w, y + h, z + l, 0};
             vertices[7] = {x, y + h, z + l, 0};
-
-            num_edges = new GLint[6];
             for(int i = 0; i < num_faces; i++)
                 num_edges[i] = 4;
-            indices = new GLint *[6];
             for(int i = 0; i < num_faces; i++){
                 indices[i] = new int[num_edges[i]];
             }
