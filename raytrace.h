@@ -12,6 +12,7 @@
 
 #define PI 3.14159265358979323846264338327
 
+
 /* data structures */
 
 class Object3D;
@@ -22,43 +23,63 @@ class Quadric;
 class Ellipsoid;
 class Sphere;
 class point4d;
+class color;
 const point4d operator*(const double, const point4d &);
 const point4d operator~(const point4d &);
+const color operator*(const double, const color &);
 
-typedef struct color {
-    GLdouble r;
-    GLdouble g;
-    GLdouble b; 
-    /* these should be between 0 and 1 */
-    const color operator*(const GLdouble scale) const {
-        return { r * scale, g * scale, b * scale };
-    }
-    const color operator*=(const GLdouble scale){
-        *this = *this * scale;
-        return *this;
-    }
-    const color operator+(const color &c) const {
-        return { r + c.r, g + c.g, b + c.b };
-    }
-    const color operator+=(const color &c){
-        *this = *this + c;
-        return *this;
-    }
-} color;
+
+void print_vector(point4d);
+void print_color(color);
+
+class color {
+    public:
+        GLdouble r;
+        GLdouble g;
+        GLdouble b; 
+        /* these should be between 0 and 1 */
+
+        const color operator*(const GLdouble scale) const {
+            return { r * scale, g * scale, b * scale };
+        }
+
+        const color operator*(const color& other){
+            return {r * other.r, g * other.g, b * other.b};
+        }
+
+        const color operator*=(const GLdouble scale){
+            *this = *this * scale;
+            return *this;
+        }
+
+        const color operator+(const color &c) const {
+            return { r + c.r, g + c.g, b + c.b };
+        }
+
+        const color operator+=(const color &c){
+            *this = *this + c;
+            return *this;
+        }
+        const bool operator==(const color &c){
+            return r == c.r && g == c.g && b == c.b;
+        }
+        const bool operator!=(const color &c){
+            return !(*this == c);
+        }
+};
 
 typedef struct material {
     /* color */
-    color c;
     /* specular reflectivity */
-    GLdouble s;
+    color s;
     /* refractivity */
     GLdouble r;
     /* shininess */
     GLdouble h;
     /* ambient reflectivity */
-    GLdouble a;
+    color a;
     /* diffuse reflectivity */
-    GLdouble d;
+    color d;
 } material;
 
 typedef struct sphere {
@@ -118,6 +139,12 @@ class point4d {
         // r=d-2(d?n)n
         // reflection across normal
         const point4d operator|(const point4d &normal) const {
+            //printf("operator reflect\n");
+            //printf("this\n");
+            //print_vector(*this);
+            //printf("normal\n");
+            //print_vector(normal);
+            //printf("dot: %f\n", *this * normal);
             return *this - (2 *(*this * normal) * normal);
         }
         const point4d operator|=(const point4d &normal){
@@ -131,7 +158,19 @@ class point4d {
             *this = *this - rhs;
             return *this;
         }
-
+        const point4d operator=(const point4d &rhs){
+            x = rhs.x;
+            y = rhs.y;
+            z = rhs.z;
+            w = rhs.w;
+            return *this;
+        }
+        const bool operator==(const point4d &rhs){
+            return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w;
+        }
+        const bool operator!=(const point4d &rhs){
+            return !(*this == rhs);
+        }
 };
 
 
