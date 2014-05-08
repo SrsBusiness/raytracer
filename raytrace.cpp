@@ -408,12 +408,12 @@ color trace(ray* r, Object3D *prev, int depth) {
         firstHit(obj, &shadow, &shadow_sect, (vector4d*)nullptr, (material*)nullptr);
         if (shadow_sect.w == 0) {
             dull = phong(&intersect, &n, &m, r -> dir, &lsource, &source); 
-        // no shadow (no intersection)
+            // no shadow (no intersection)
         } else {
             dull = phong(&intersect, &n, &m, r -> dir, &lsource, &back); 
         }
         result = (intensity + dull) * .5;
-        }
+    }
     normalize(&result);
     return result;
 }
