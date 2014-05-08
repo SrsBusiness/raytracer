@@ -46,6 +46,7 @@ const color operator*(const double scale, const color &rhs){
     return {scale * rhs.r, scale * rhs.g, scale * rhs.b};
 }
 
+
 /*
 bool test_quadric_intersect(ray r, Quadric q){
     GLdouble intersects[4][4];
@@ -80,7 +81,6 @@ bool test_quadric_intersect(ray r, Quadric q){
     return correct;
 }
 */
-#define randf(a) (((double)rand() - (double)RAND_MAX * 0.5) / (double)RAND_MAX * 2 * (double)a)
 
 int herp(int argc, char **argv){
     vector4d u, v;

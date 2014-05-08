@@ -5,7 +5,7 @@
 /******************************************************************/
 
 #ifdef _WIN32
-#include <windows.h>
+include <windows.h>
 #endif
 #include <assert.h>
 #include <stdio.h>
@@ -17,8 +17,14 @@
 #include "raytrace.h"
 #include <stdarg.h>
 #include <vector>
+#include <pthread.h>
 
-#define MAX_DEPTH 5
+#define MAX_DEPTH 16
+#define E 2.71828182846
+
+#define randfs(a) (((double)rand() - (double)RAND_MAX * 0.5) / (double)RAND_MAX * 2 * (double)a) // signed
+#define randf(a) ((double)rand() / (double)RAND_MAX * (double)a)
+//#define MAX_THREADS 8
 /* local functions */
 void initScene(void);
 void initCamera (int, int);
@@ -26,7 +32,7 @@ void display(void);
 void init(int, int);
 void traceRay(ray*,color*);
 void drawScene(void);
-void firstHit(ray*,point4d*,vector4d*,material**);
+Object3D *firstHit(Object3D *exc, ray* r, point4d* p, vector4d* n, material *m);
 color trace(ray*, Object3D *, int);
 color normalized(color);
 
@@ -35,8 +41,11 @@ using namespace std;
 
 color source, back, ambi;
 vector4d lsource;
-vector4d eye;
 
+bool traced = false;
+
+int max_threads = 1;
+int samples = 16;
 /* the scene: so far, just one sphere */
 //sphere* s1;
 vector<Object3D *> objects;
@@ -44,10 +53,28 @@ vector<Object3D *> objects;
 point4d* viewpoint;
 GLdouble pnear;  /* distance from viewpoint4d to image plane */
 GLdouble fovx;  /* x-angle of view frustum */
-int width = 500;     /* width of window in pixels */
-int height = 350;    /* height of window in pixels */
+int width = 1200;     /* width of window in pixels */
+int height = 800;    /* height of window in pixels */
+double gaussian(double, double);
 
 int main (int argc, char** argv) {
+    /*
+       double d = sqrt(2);
+       double x = gaussian(.30, .40);
+       printf("gaussian(%f, %f) = %f\n", .30, .40, x);
+       x = gaussian(.40, .30);
+       printf("gaussian(%f, %f) = %f\n", .40, .30, x);
+       x = gaussian(.50, .0);
+       printf("gaussian(%f, %f) = %f\n", .50, .00, x);
+       for(int i = 0; i < 1000; i++){
+       printf("%f\n", randfs(.5));
+       }
+       */
+    if(argc < 2){
+        printf("Please specify number of threads\n");
+        return 1;
+    }
+    max_threads = strtol(argv[1], NULL, 10);
     int win;
     glutInit(&argc,argv);
     glutInitWindowSize(width,height);
@@ -85,24 +112,36 @@ void display() {
     glFlush();
 }
 
+
+
 void initScene () {
     source = {1, 1, 1};
     back = {0, 0, 0};
-    ambi = {0.1, 0.1, 0.1};
-    lsource = {1, 1, 1, 0};
+    ambi = {.2, .2, .2};
+    lsource = {2, 0, 1, 0};
     lsource = ~lsource;
-
-    //s1 = makeSphere(0.0,0.0,-2.0,0.25);
-    //s1->m = makeMaterial(1.0,0.1,0.15,0.3);
-    //objects.push_back(new Sphere(0, 0, 2, 1, (material){1, 0, 0, .2}));
-    objects.push_back(new Sphere(-.8, .2, -7, .25, (material){{1, 1, 1}, 0.2, 200.0, {0, .2, 0}, {0, 0, 1}}));
-    objects.push_back(new Sphere(.6, .2, -5, .25, (material){{1, 1, 1}, 0.2, 200.0, {0, .2, 0}, {0, 1, 0}}));
-    objects.push_back(new Sphere(0, .5, -8, .25, (material){{1, 1, 1}, 0.2, 200.0, {0, .2, 0}, {1, 0, 0}}));
-    //objects.push_back(new Sphere(-.3, -.5, -4, .3, (material){{0.4, 0.3, 0.2}, {0, 0, 0}, 0.2, 5.0, {0, .2, 0}, {1, 0, 0}}));
-    //objects.push_back(new Sphere(0, 0, -6, .5, (material){{0.4, 0.9, 0.1}, 0.1, 0.9, 2.0, 0.2, 0.4}));
-    //objects.push_back(new Cube(0, 1, -6, .5, (material){{0.2, 0.7, 0.1}, 0.3, 0.6, 2.0, 0.2, 0.4}));
-
-    //objects.push_back(new Cube(0, 0, 2, 1, (material){1, 0, 0, .7}));
+    double r, g, b;
+    for(int i = -2; i <= 2; i++){
+        for(int j = -1; j <= 1; j++){
+            r = randf(1.0);
+            g = randf(1.0);
+            b = randf(1.0);
+            double z;
+            if((j + i) & 1)
+                z = -11.0;
+            else
+                z = -12.0;
+            objects.push_back(new Sphere(i, j, z, .25, (material){{1, 1, 1}, 0.2, 1000.0, {r, g, b}, {r, g, b}}));
+        }
+    }
+    for(double i = -1.0; i <= 1.0; i += .5){
+        for(double j = -1.0; j <= 1.0; j += .5){
+            r = randf(1.0);
+            g = randf(1.0);
+            b = randf(1.0);
+            objects.push_back(new Sphere(i + .25, j + .25, -5, 0.05, (material){{1, 1, 1}, 0.2, 1000.0, {r, g, b}, {r, g, b}}));
+        }
+    }
 }
 
 void initCamera (int w, int h) {
@@ -153,51 +192,65 @@ void normalize(color *c){
         c -> b = 1.0;
 }
 
-void drawScene () {
-    int i, j;
+GLdouble gaussian(GLdouble x, GLdouble y){
+    return pow(E, (x * x + y * y) / -2) / (2 * PI);
+}
+
+void *draw(void *ptr){
+    long thread_id = (long)ptr;
     GLdouble imageWidth;
-    /* declare data structures on stack to avoid dynamic allocation */
     point4d worldPix;  /* current pixel in world coordinates */
     point4d direction; 
     ray r;
     color c;
 
-    /* initialize */
     worldPix.w = 1.0;
     worldPix.z = -pnear;
 
+    double total;
     imageWidth = 2 * pnear * tan(fovx / 2);
-
-    /* trace a ray for every pixel */
-    for (i = 0; i < width; i++) {
-        /* Refresh the display */
-        /* Comment this line out after debugging */
-        flushCanvas();
-
-        for (j = 0; j < height; j++) {
-
-            /* find position of pixel in world coordinates */
-            /* y position = (pixel height/middle) scaled to world coords */ 
+    for(int i = thread_id * width / max_threads; i < width && i < (thread_id + 1) * width / max_threads; i++){
+        for(int j = 0; j < height; j++){
+            //total = 0.0;
             worldPix.y = (j - (height / 2)) * imageWidth / width;
-            /* x position = (pixel width/middle) scaled to world coords */ 
             worldPix.x = (i - (width / 2)) * imageWidth / width;
-
-            /* find direction */
-            /* note: direction vector4d is NOT NORMALIZED */
-            //printf("primary ray\n");
             r.copy(worldPix, worldPix - *viewpoint);
-            //printf("worldPix.w: %f, viewpoint.w: %f\n", worldPix.w, viewpoint -> w);
-            //print_vector(*r.dir);
-            eye = ~(*r.dir);
-
-            /* trace the ray! */
-            c = trace(&r, NULL, 0);
-            //c = cast(&r);
-            normalize(&c);
-            //assert_color(c);
-            /* write the pixel! */
+            double gauss = gaussian(0.0, 0.0);
+            c = trace(&r, NULL, 0) * gauss;
+            total = gauss;
+            //printf("samples: \n");
+            for(int k = 0; k < samples; k++){ 
+                double dx = randfs(.5);
+                double dy = randfs(.5);
+                gauss = gaussian(dx, dy);
+                point4d sample;
+                sample.y = ((double)j + dy - (height / 2)) * imageWidth / width;
+                sample.x = ((double)i + dx - (width / 2)) * imageWidth / width;
+                sample.z = -pnear;
+                sample.w = 1.0;
+                //printf("worldPix.x: %f, worldPix.y: %f, sample.x: %f, sample.y: %f\n", worldPix.x, worldPix.y, sample.x, sample.y);
+                r.copy(sample, sample - *viewpoint);
+                c += trace(&r, NULL, 0) * gauss;
+                total += gauss;
+                //normalize(&c);
+            }
+            c /= total;
             drawPixel(i,j,c.r,c.g,c.b);
         }
+    }
+}
+
+void drawScene () {
+    if(!traced){
+        pthread_t threads[max_threads];
+        for(long i = 0; i < max_threads; i++){
+            pthread_create(threads + i, NULL, draw, (void *)i);
+        }
+        /* trace a ray for every pixel */
+        for(int i = 0; i < max_threads; i++){
+            pthread_join(threads[i], NULL);
+        }
+        traced = true;
     }
 }
 
@@ -289,6 +342,8 @@ color phong(point4d *p, vector4d *n, material *m, vector4d *in, vector4d *light,
         m -> s * (pow((max_d(2, 0.0, normal * half)) , m -> h) * *light_rgb);
 }
 
+
+
 color cast(ray *r){
     point4d intersect;
     vector4d normal;
@@ -296,9 +351,9 @@ color cast(ray *r){
     firstHit(NULL, r, &intersect, &normal, &m);
     if(intersect.w == 0.0)
         return {0.0, 0.0, 0.0};
-    //color result = phong(&intersect, &normal, &m, r -> dir, &lsource, &source);
+    color result = phong(&intersect, &normal, &m, r -> dir, &lsource, &source);
     normal = ~normal;
-    color result = {normal.x, normal.y, normal.z};
+    //color result = {normal.x, normal.y, normal.z};
     //assert_color(result);
     return result;
 }
@@ -306,56 +361,36 @@ color cast(ray *r){
 color trace(ray* r, Object3D *prev, int depth) {
     ray flec, frac;
     color spec, refr, dull;
-    color intensity;
+    color intensity, result;
     if(depth >= MAX_DEPTH){
         return back; 
     }
-    //depth++;
     point4d intersect = { 0, 0, 0, 0 };
     vector4d n;
     material m;
     Object3D *obj = firstHit(prev, r, &intersect, &n, &m);
-    n = ~n;
+    //n = ~n;
     if(intersect.w == 0){ // no intersect
-        intensity = source * max_d(2, 0, (*(r->dir)) * lsource);
+        if((~(*(r->dir)) * ~lsource) == 1.0){
+            result = source;
+        }else
+            result = back;
     } else {
 
-        //printf("intersect\n");
-        //print_vector(intersect);
+        //printf("normal: ");
+        //print_vector(n);
         // compute reflection
+        /*if(norm * n < 0.01 && norm * n > -0.01){
+          return {1, 1, 1};
+          }*/
         if (m.s.r + m.s.g + m.s.b > 0) {
-            //printf("ray\n");
-            //print_vector(~(*r -> dir));
-            //printf("normal\n");
-            //print_vector(n);
-            vector4d norm = (*r->dir) | (~n);
-            printf("depth: %d\n", depth);
-            printf("Hit object\n");
-            printf("normal\n");
-            print_vector(n);
-            print_color(m.d);
-            //printf("reflect\n");
-            //print_vector(norm);
-            //print_vector((*r -> dir) | (~n));
+            vector4d norm = (*r->dir) | n;
             flec.copy(intersect, norm);
-            //color incoming = trace(&flec, depth + 1);
-            //spec = phong(&intersect, &n, &m, r -> dir, &norm, &incoming);
-            color tmp = trace(&flec, obj, depth + 1);
-            //vector4d half = ~(*r -> dir + n)
-            //spec = apply_material(m.s, tmp) + source * pow((~(*r->dir) * ~eye), m.h);
-            spec = m.s * tmp;
-            //print_color(tmp);
-            intensity = (spec + m.d) * .5;
-            //spec = tmp * pow((~(*r->dir) * ~eye), m.h);
-            /*
-               printf("*r -> dir: ");
-               print_vector(~*r -> dir);
-               printf("eye: ");
-               print_vector(~eye);
-               printf("dot: %f\n", ~(*r->dir) * ~eye);
-               */
-            //print_color(source * pow((~(*r->dir) * ~eye), m.h));
-            //
+            color incoming = trace(&flec, obj, depth + 1);
+            intensity = m.s * incoming;
+            //double shine = pow(~(*r -> dir) * ~eye, m.h);
+            //printf("shine: %f\n", shine);
+            //intensity = (m.s * incoming + (color){shine, shine, shine}) * .5;
         } else {
             spec = { 0, 0, 0 };
         }
@@ -366,37 +401,19 @@ color trace(ray* r, Object3D *prev, int depth) {
         } else {
             refr = { 0, 0, 0 };
         }
-
         // compute shadow
         ray shadow;
         shadow.copy(intersect, lsource);
-        point4d shadow_sect = { 0, 0, 0, 0 };
-        //firstHit(&shadow, &shadow_sect, (vector4d*)nullptr, (material*)nullptr);
-        /*
+        point4d shadow_sect;
+        firstHit(obj, &shadow, &shadow_sect, (vector4d*)nullptr, (material*)nullptr);
         if (shadow_sect.w == 0) {
-            // no shadow (no intersection)
-            //printf("hi\n");
-            //dull = (source * apply_material(m.d * (n * lsource))) + (ambi * m.a);
+            dull = phong(&intersect, &n, &m, r -> dir, &lsource, &source); 
+        // no shadow (no intersection)
         } else {
-            //dull = ambi * m.a;
+            dull = phong(&intersect, &n, &m, r -> dir, &lsource, &back); 
         }
-        */
-        dull = phong(&intersect, &n, &m, &eye, &lsource, &source); 
-        intensity += dull;;
-        /*
-           if(intensity == spec){
-           printf("spec\n");
-           print_color(spec);
-           printf("intensity before\n");
-           print_color(intensity);
-           }
-           */
-        //intensity = (intensity + m.d) * .5;
-        //printf("material color\n");
-        //print_color(m.d);
-        //printf("intensity after\n");
-        //print_color(intensity);
-    }
-    normalize(&intensity);
-    return intensity;
+        result = (intensity + dull) * .5;
+        }
+    normalize(&result);
+    return result;
 }
