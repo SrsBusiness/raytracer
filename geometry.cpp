@@ -16,7 +16,7 @@
 #include "raytrace.h"
 
 void print_color(color c){
-    printf("%f, %f, %f\n", c.r, c.g, c.b);
+    printf("%f, %f, %f\n", c.rgb[0], c.rgb[1], c.rgb[2]);
 }
 
 void print_vector(point4d p){
@@ -43,7 +43,7 @@ const point4d operator~(const point4d &rhs){
 }
 
 const color operator*(const double scale, const color &rhs){
-    return {scale * rhs.r, scale * rhs.g, scale * rhs.b};
+    return {scale * rhs.rgb[0], scale * rhs.rgb[1], scale * rhs.rgb[2]};
 }
 
 

@@ -11,7 +11,10 @@
 #define FALSE 0
 
 #define PI 3.14159265358979323846264338327
-
+// wavelengths in micrometers
+#define RED .650
+#define GREEN .510
+#define BLUE .475
 
 /* data structures */
 
@@ -36,16 +39,17 @@ void print_color(color);
 
 class color {
     public:
-        GLdouble r;
-        GLdouble g;
-        GLdouble b; 
+        //GLdouble r;
+        //GLdouble g;
+        //GLdouble b; 
+        GLdouble rgb[3];
         /* these should be between 0 and 1 */
 
         const color operator*(const GLdouble scale) const {
-            return { r * scale, g * scale, b * scale };
+            return { {rgb[0] * scale, rgb[1] * scale, rgb[2] * scale }};
         }
         const color operator/(const GLdouble scale) const {
-            return { r / scale, g / scale, b / scale };
+            return {{ rgb[0] / scale, rgb[1] / scale, rgb[2] / scale }};
         }
         const color operator/=(const GLdouble scale){
             *this = *this / scale;
@@ -53,7 +57,7 @@ class color {
         }
 
         const color operator*(const color& other) const{
-            return {r * other.r, g * other.g, b * other.b};
+            return {{rgb[0] * other.rgb[0], rgb[1] * other.rgb[1], rgb[2] * other.rgb[2]}};
         }
 
         const color operator*=(const GLdouble scale){
@@ -62,7 +66,7 @@ class color {
         }
 
         const color operator+(const color &c) const {
-            return { r + c.r, g + c.g, b + c.b };
+            return {{ rgb[0] + c.rgb[0], rgb[1] + c.rgb[1], rgb[2] + c.rgb[2] }};
         }
 
         const color operator+=(const color &c){
@@ -70,7 +74,7 @@ class color {
             return *this;
         }
         const bool operator==(const color &c){
-            return r == c.r && g == c.g && b == c.b;
+            return rgb[0] == c.rgb[0] && rgb[1] == c.rgb[1] && rgb[2] == c.rgb[2];
         }
         const bool operator!=(const color &c){
             return !(*this == c);
@@ -82,7 +86,10 @@ typedef struct material {
     /* specular reflectivity */
     color s;
     /* refractivity */
-    GLdouble r;
+    // using cauchy's equation, n (refractive index) = b + c / (wavelength ^ 2)
+    // typical values:
+    // Fused silica (glass): b = 1.4580, c = .00354
+    GLdouble b, c;
     /* shininess */
     GLdouble h;
     /* ambient reflectivity */
