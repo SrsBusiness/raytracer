@@ -12,6 +12,7 @@
 
 #define PI 3.14159265358979323846264338327
 
+
 /* data structures */
 
 class Object3D;
@@ -22,43 +23,72 @@ class Quadric;
 class Ellipsoid;
 class Sphere;
 class point4d;
+class color;
+class ray;
 const point4d operator*(const double, const point4d &);
 const point4d operator~(const point4d &);
+const color operator*(const double, const color &);
+void findpointOnRay(ray*,double,point4d*);
 
-typedef struct color {
-    GLdouble r;
-    GLdouble g;
-    GLdouble b; 
-    /* these should be between 0 and 1 */
-    const color operator*(const GLdouble scale) const {
-        return { r * scale, g * scale, b * scale };
-    }
-    const color operator*=(const GLdouble scale){
-        *this = *this * scale;
-        return *this;
-    }
-    const color operator+(const color &c) const {
-        return { r + c.r, g + c.g, b + c.b };
-    }
-    const color operator+=(const color &c){
-        *this = *this + c;
-        return *this;
-    }
-} color;
+
+void print_vector(point4d);
+void print_color(color);
+
+class color {
+    public:
+        GLdouble r;
+        GLdouble g;
+        GLdouble b; 
+        /* these should be between 0 and 1 */
+
+        const color operator*(const GLdouble scale) const {
+            return { r * scale, g * scale, b * scale };
+        }
+        const color operator/(const GLdouble scale) const {
+            return { r / scale, g / scale, b / scale };
+        }
+        const color operator/=(const GLdouble scale){
+            *this = *this / scale;
+            return *this;
+        }
+
+        const color operator*(const color& other) const{
+            return {r * other.r, g * other.g, b * other.b};
+        }
+
+        const color operator*=(const GLdouble scale){
+            *this = *this * scale;
+            return *this;
+        }
+
+        const color operator+(const color &c) const {
+            return { r + c.r, g + c.g, b + c.b };
+        }
+
+        const color operator+=(const color &c){
+            *this = *this + c;
+            return *this;
+        }
+        const bool operator==(const color &c){
+            return r == c.r && g == c.g && b == c.b;
+        }
+        const bool operator!=(const color &c){
+            return !(*this == c);
+        }
+};
 
 typedef struct material {
     /* color */
-    color c;
     /* specular reflectivity */
-    GLdouble s;
+    color s;
     /* refractivity */
     GLdouble r;
     /* shininess */
     GLdouble h;
     /* ambient reflectivity */
-    GLdouble a;
+    color a;
     /* diffuse reflectivity */
-    GLdouble d;
+    color d;
 } material;
 
 typedef struct sphere {
@@ -92,6 +122,13 @@ class point4d {
             *this = rhs * *this; 
             return *this;
         }
+        const point4d operator/=(const double rhs){
+            *this = *this / rhs; 
+            return *this;
+        }
+        const point4d operator/(const double rhs) const{
+            return {x / rhs, y / rhs, z / rhs, w / rhs};
+        }
         const point4d operator^(const point4d &rhs) const {
             point4d p;
             p.x = y * rhs.z - z * rhs.y;
@@ -118,7 +155,14 @@ class point4d {
         // r=d-2(d?n)n
         // reflection across normal
         const point4d operator|(const point4d &normal) const {
-            return *this - (2 *(*this * normal) * normal);
+            //printf("operator reflect\n");
+            //printf("this\n");
+            //print_vector(*this);
+            //printf("normal\n");
+            //print_vector(normal);
+            //printf("dot: %f\n", *this * normal);
+            //return *this - (2 *(*this * normal) * normal);
+            return *this - ((2 * (*this * normal) * normal) / (normal * normal));
         }
         const point4d operator|=(const point4d &normal){
             *this = *this | normal;
@@ -131,7 +175,19 @@ class point4d {
             *this = *this - rhs;
             return *this;
         }
-
+        const point4d operator=(const point4d &rhs){
+            x = rhs.x;
+            y = rhs.y;
+            z = rhs.z;
+            w = rhs.w;
+            return *this;
+        }
+        const bool operator==(const point4d &rhs){
+            return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w;
+        }
+        const bool operator!=(const point4d &rhs){
+            return !(*this == rhs);
+        }
 };
 
 
@@ -196,6 +252,8 @@ class Object3D{
         virtual int intersect_t(ray, GLdouble[4], point4d[4]) =0; // returns parameter t for all intersections
 };
 
+
+
 class Polyhedron: public Object3D{
     public:
         // vertices on a face must be stored in counterclockwise order
@@ -239,44 +297,68 @@ class Polyhedron: public Object3D{
             }
             delete indices;
         }
-        /* copy constructor
-           Polyhedron(const Polyhedron &other){
-           num_vert = other.num_vert;
-           vertices = new GLdouble[num_vert];
-           for(int i = 0; i < num_vert; i++)
-           vertices[i] = other.vertices[i];
-           num_faces = other.num_faces;
-           index_len  = other.index_len;
-           indices = new GLint[index_len];
-           for(int i = 0; i < index_len; i++)
-           indices[i] = other.indices[i]; 
-           }
-           */
+        
+        double intersect(ray r, point4d normal, double d){
+            GLdouble face_dir = (*r.dir) * normal;
+            return -1 * (((*r.start) * normal) + d) / face_dir;
+        }
+
         int intersect_t(ray r, GLdouble intersects[4], point4d normals[4]){
             GLdouble enter = 0.0;
-            GLdouble exit = 1000000.0;
+            GLdouble exit = INFINITY;
             point4d enter_n, exit_n;
+            point4d parallel[2];
+            double paralleld[2];
+            int num_parallel = 0;
             for(int i = 0; i < num_faces; i++){ // for every face
                 vector4d v1 = vertices[indices[i][0]] - vertices[indices[i][1]];
                 vector4d v2 = vertices[indices[i][2]] - vertices[indices[i][1]];
                 vector4d normal = v2 ^ v1;
+                // ax + by + cz + d = 0
+                // ax + by + cz = -d
+                // n = {a, b, c}
+                // p = {x, y, z}
+                // n * p = -d
+                
                 GLdouble d = -1 * (normal * vertices[indices[i][0]]);
+                
                 // normal contains coefficients of x, y, z, and we have d, the constant
                 // we have implicit form of plane, and 
+                
                 GLdouble face_dir = (*r.dir) * normal;
-                if(face_dir > -.0001 && face_dir < 0.0001){
+                
+                if(face_dir == -0.0 && face_dir == 0.0){ // plane is parallel
+                    //printf("%f\n", face_dir);
+                    //printf("Parallel\n");
+                    parallel[num_parallel] = normal;
+                    paralleld[num_parallel++] = d;
                     continue;
                 }
-                GLdouble t = -1 * (((*r.start) * normal) + d) / face_dir;
-                if(face_dir < -0.0001){ // plane is facing towards us
+
+                GLdouble t = intersect(r, normal, d);
+                if(face_dir < -0.0){ // plane is facing towards us
                     if(t > enter){
                         enter = t;
                         enter_n = normal;
                     }
-                }else if(face_dir > 0.0001){
-                    if(t < exit)
+                }else if(face_dir > 0.0){
+                    if(t < exit){
                         exit = t;
-                    exit_n = normal;
+                        exit_n = normal;
+                    }
+                }
+            }
+            //printf("parallel: %d\n", num_parallel);
+            double half = .5 * (enter + exit);
+            ray tmp;
+            for(int i = 0; i < num_parallel; i++){
+                point4d halfp;
+                findpointOnRay(&r, half, &halfp);
+                tmp.copy(halfp, parallel[i]);
+                GLdouble t = intersect(tmp, parallel[i], paralleld[i]);
+                if(t < 0.0){
+             //       printf("no intersect\n");
+                    return 0;
                 }
             }
             if(enter < exit){
@@ -323,6 +405,10 @@ class Rect_Prism : public Polyhedron{
 class Cube: public Rect_Prism{
     public:
         Cube(GLdouble x, GLdouble y, GLdouble z, GLdouble side, material m) : Rect_Prism(x, y, z, side, side, side, m){
+            printf("vertices: \n");
+            for(int i = 0; i < num_vert; i++){
+                print_vector(vertices[i]); 
+            }
         }
 };
 
@@ -330,18 +416,21 @@ class Quadric : public Object3D{ // class for general quadric solids
     public:
         GLdouble a, b, c, d, e, f, g, h, j, k;
         Quadric(GLdouble a, GLdouble b, GLdouble c, GLdouble d, GLdouble e, GLdouble f, GLdouble g, GLdouble h, GLdouble j, GLdouble k, material m){
-            this -> a = a;
-            this -> b = b;
-            this -> c = c;
-            this -> d = d;
-            this -> e = e;
-            this -> f = f;
-            this -> g = g;
-            this -> h = h;
-            this -> j = j;
-            this -> k = k;
+            this -> a = a / a;
+            this -> b = b / a;
+            this -> c = c / a;
+            this -> d = d / a;
+            this -> e = e / a;
+            this -> f = f / a;
+            this -> g = g / a;
+            this -> h = h / a;
+            this -> j = j / a;
+            this -> k = k / a;
             this -> m = new material();
             *this -> m = m;
+            //printf("a: %f, b: %f, c: %f, d: %f, e: %f, f: %f, g: %f, h: %f, j: %f, k: %f\n", 
+            //        this -> a, this -> b, this -> c, this -> d, this -> e, 
+            //        this -> f, this -> g, this -> h, this -> j, k);
         }
         virtual int intersect_t(ray r, GLdouble t[4], point4d normals[4]){
             vector4d *v = r.dir;
@@ -372,6 +461,8 @@ class Quadric : public Object3D{ // class for general quadric solids
                     2 * d * tmp_y + b * tmp_x + e * tmp_z + h, 
                     2 * f * tmp_z + c * tmp_x + e * tmp_y + j,
                     0};
+                //printf("normal %d: ", i);
+                //print_vector(normals[i]);
             }
             return num_roots;
         }
@@ -403,7 +494,6 @@ point4d* makepoint4d(GLdouble, GLdouble, GLdouble);
 point4d* copypoint4d(point4d *);
 void freepoint4d(point4d *);
 void calculateDirection(point4d*,point4d*,point4d*);
-void findpointOnRay(ray*,double,point4d*);
 int raySphereIntersect(ray*,sphere*,double*);
 void findSphereNormal(sphere*,point4d*,vector4d*);
 

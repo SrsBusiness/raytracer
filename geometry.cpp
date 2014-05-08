@@ -15,6 +15,13 @@
 #include "common.h"
 #include "raytrace.h"
 
+void print_color(color c){
+    printf("%f, %f, %f\n", c.r, c.g, c.b);
+}
+
+void print_vector(point4d p){
+    printf("%f, %f, %f, %f\n", p.x, p.y, p.z, p.w);
+}
 
 int quad_roots(GLdouble, GLdouble, GLdouble, GLdouble *);
 
@@ -23,6 +30,7 @@ const point4d operator*(const double lhs, const point4d &rhs){
     p.x = lhs * rhs.x; 
     p.y = lhs * rhs.y;
     p.z = lhs * rhs.z;
+    p.w = lhs * rhs.w;
     return p;
 }
 const point4d operator~(const point4d &rhs){
@@ -32,6 +40,10 @@ const point4d operator~(const point4d &rhs){
     p.y = rhs.y / mag;
     p.z = rhs.z / mag;
     return p;
+}
+
+const color operator*(const double scale, const color &rhs){
+    return {scale * rhs.r, scale * rhs.g, scale * rhs.b};
 }
 
 
@@ -69,59 +81,14 @@ bool test_quadric_intersect(ray r, Quadric q){
     return correct;
 }
 */
-#define randf(a) (((double)rand() - (double)RAND_MAX * 0.5) / (double)RAND_MAX * 2 * (double)a)
-/*
-int main(int argc, char **argv){
-rmal vector4d n to the surface at that point4d, and the surface
-2
-    if(argc < 3){
-        printf("Please enter seed and number of tests\n");
-        return 1;
-    }
-    GLdouble color[4];
-    rmal vector4d n to the surface at that point4d, and the surface
 
-    srand(strtol(argv[1], NULL, 10));
-    for(int i = 0; i < strtol(argv[2], NULL, 10); i++){
-        Quadric q(randf(100), randf(100), randf(100), randf(100), randf(100), randf(100), randf(100), randf(100), randf(100), randf(100), color);
-        point4d p(randf(100), randf(100), randf(100), 1.0);
-        vector4d d(randf(100), randf(100), randf(100), 0.0);
-        ray r(p, d); 
-        test_quadric_intersect(r, q);
-    }
-    Sphere s(0.0, 0.0, 0.0, 100, color);
-    point4d start(0, 0, 30, 1.0);
-    vector4d dir(-1, 1, -3, 0);
-    ray r(start, dir);
-    GLdouble intersects[4][4];
-    int num_intersects = s.intersect(r, intersects);
-    for(int i = 0; i < num_intersects; i++)
-        printf("intersect %d, %f, %f, %f\n", i, intersects[i][0], intersects[i][1], intersects[i][2]);
-    printf("Sphere\n");
-    printf("Sphere coefficients: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", s.a, s.b, s.c, s.d, s.e, s.f, s.g, s.h, s.j, s.k);
-    printf("testing vector4d operators:\n");
-    vector4d u(4, 5, 7, 0);
-    vector4d v(-1, 6, 3, 0);
-    printf("u: %f, %f, %f, %f ; v: %f, %f, %f, %f\n", u.x, u.y, u.z, u.w, v.x, v.y, v.z, v.w);
-    vector4d result = u + v;
-    printf("u + v: %f, %f, %f, %f\n", result.x, result.y, result.z, result.w);
-    double dot = u * v;
-    printf("u * v: %f\n", dot);
-    result = u - v;
-    printf("u - v: %f, %f, %f, %f\n", result.x, result.y, result.z, result.w);
-    result = ~(u ^ v);
-    printf("~(u ^ v): %f, %f, %f, %f\n", result.x, result.y, result.z, result.w);
-    u -= v;
-    printf("u -= v: %f, %f, %f, %f\n", u.x, u.y, u.z, u.w);
-    printf("testing cube\n");
-    Cube c(-20, -20, -20, 40);
-    num_intersects = 0;
-    num_intersects = c.intersect(r, intersects);
-    printf("%d intersects\n", num_intersects);
-    for(int i = 0; i < num_intersects; i++)
-        printf("intersect %d, %f, %f, %f\n", i, intersects[i][0], intersects[i][1], intersects[i][2]);
+int herp(int argc, char **argv){
+    vector4d u, v;
+    u = {1, 6, 8, 0};
+    v = {5, 4, 3, 0};
+    vector4d reflect = u | (~v);
+    print_vector(reflect);
 }
-*/
 // Purely cubic solids will not be included. Since they can only
 // have an odd number of real roots, there can exist no closed cubic
 // surface.
